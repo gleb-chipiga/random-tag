@@ -1,7 +1,19 @@
+# Random tag
+Command-line utility for generating random tags
+
+[![Crates.io][crates-badge]][crates-url]
+[![MIT licensed][mit-badge]][mit-url]
+
+[crates-badge]: https://img.shields.io/crates/v/random-tag.svg
+[crates-url]: https://crates.io/crates/random-tag
+[mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
+[mit-url]: LICENSE
+
 # Installation
 ``` bash
 cargo install random-tag
 ```
+
 # Usage
 ```
 random-tag 0.1.4
