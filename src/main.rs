@@ -1,10 +1,10 @@
 use anyhow::{ensure, Result};
-use clap::{crate_description, crate_version, Parser};
+use clap::Parser;
 use rand::rngs::OsRng;
 use rand::seq::SliceRandom;
 
 #[derive(clap::Parser, Debug)]
-#[clap(version = crate_version!(), about = crate_description!())]
+#[clap(author, version, about)]
 struct Args {
     /// Tag chars
     #[clap(short, long, default_value = "dfqsvz0123456789")]
