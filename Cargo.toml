@@ -1,0 +1,12 @@
+[package]
+name = "random-tag"
+version = "0.1.4"
+edition = "2021"
+license = "MIT"
+description = "Generate random tags"
+repository = "https://github.com/gleb-chipiga/random-tag"
+
+[dependencies]
+anyhow = "1.0"
+rand = "0.8"
+clap = { version = "3.0", features = ["default", "derive", "cargo"] }
