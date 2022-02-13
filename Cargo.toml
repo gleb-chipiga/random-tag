@@ -3,6 +3,7 @@ name = "random-tag"
 version = "0.1.5"
 edition = "2021"
 license = "MIT"
+authors = ["Gleb Chipiga"]
 keywords = ["cli", "random", "random-generation"]
 categories = ["command-line-interface", "command-line-utilities"]
 description = "Generate random tags"
