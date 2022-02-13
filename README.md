@@ -1,5 +1,5 @@
 # Random tag
-Command-line utility for generating random tags
+Command-line utility for generating random tags.
 
 [![Rayon crate](https://img.shields.io/crates/v/random-tag.svg)](https://crates.io/crates/random-tag)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
