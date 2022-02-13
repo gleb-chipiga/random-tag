@@ -1,6 +1,6 @@
 # Installation
 ``` bash
-cargo install post-it
+cargo install random-tag
 ```
 # Usage
 ```
