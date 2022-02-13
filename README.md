@@ -1,20 +1,17 @@
 # Random tag
 Command-line utility for generating random tags
 
-[![Crates.io][crates-badge]][crates-url]
-[![MIT licensed][mit-badge]][mit-url]
+[![Rayon crate](https://img.shields.io/crates/v/random-tag.svg)](https://crates.io/crates/random-tag)
+[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![minimum rustc 1.58](https://img.shields.io/badge/rustc-1.58+-red.svg)
 
-[crates-badge]: https://img.shields.io/crates/v/random-tag.svg
-[crates-url]: https://crates.io/crates/random-tag
-[mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
-[mit-url]: LICENSE
-
-# Installation
+## Installation
+Crate requires `rustc 1.58.0` or greater. 
 ``` bash
 cargo install random-tag
 ```
 
-# Usage
+## Usage
 ```
 random-tag 0.1.4
 Generate random tags
