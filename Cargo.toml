@@ -3,6 +3,8 @@ name = "random-tag"
 version = "0.1.4"
 edition = "2021"
 license = "MIT"
+keywords = ["cli", "random", "random-generation"]
+categories = ["command-line-interface", "command-line-utilities"]
 description = "Generate random tags"
 repository = "https://github.com/gleb-chipiga/random-tag"
 
