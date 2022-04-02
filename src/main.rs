@@ -1,7 +1,9 @@
 use anyhow::{ensure, Result};
-use clap::Parser;
+use clap::{CommandFactory, Parser};
+use clap_complete::{generate, Shell};
 use rand::rngs::OsRng;
 use rand::seq::SliceRandom;
+use std::io;
 
 #[derive(clap::Parser, Debug)]
 #[clap(author, version, about)]
@@ -15,10 +17,19 @@ struct Args {
     /// Tags amount from 1 to 255
     #[clap(short, long, default_value = "1")]
     amount: u8,
+    /// Outputs the completion file for given shell
+    #[clap(short, long, arg_enum)]
+    shell: Option<Shell>,
 }
 
 fn main() -> Result<()> {
     let args: Args = Parser::parse();
+    if let Some(shell) = args.shell {
+        let mut command = Args::command();
+        let name = command.get_name().to_string();
+        generate(shell, &mut command, name, &mut io::stdout());
+        return Ok(());
+    }
     ensure!(
         !args.chars.is_empty(),
         "at least one character must be provided"
@@ -31,7 +42,7 @@ fn main() -> Result<()> {
         let tag: String = (0..args.length)
             .map(|_| chars.choose(&mut rng).unwrap())
             .collect();
-        println!("{tag}");
+        println!("{}", tag);
     }
     Ok(())
 }
