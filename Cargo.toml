@@ -1,7 +1,8 @@
 [package]
 name = "random-tag"
-version = "0.1.10"
+version = "0.1.11"
 edition = "2021"
+rust-version = "1.59"
 license = "MIT"
 authors = ["Gleb Chipiga"]
 keywords = ["cli", "random", "random-generation"]
@@ -12,4 +13,8 @@ repository = "https://github.com/gleb-chipiga/random-tag"
 [dependencies]
 anyhow = "1.0"
 rand = "0.8"
-clap = { version = "3.0", features = ["default", "derive", "cargo"] }
+clap = { version = "3.1", features = ["default", "derive", "cargo"] }
+clap_complete = "3.1"
+
+[profile.release]
+strip = true
