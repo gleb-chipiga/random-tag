@@ -92,6 +92,13 @@ pub(crate) fn generate_tags(chars: Chars, length: usize, amount: usize) -> Resul
     write_txn.commit().context("can't commit write transaction")
 }
 
+fn format_timestamp(timestamp: i64) -> Result<String> {
+    OffsetDateTime::from_unix_timestamp(timestamp)
+        .context("can't decode unix timestamp")?
+        .format(&Rfc3339)
+        .context("can't format timestamp")
+}
+
 pub(crate) fn used_tags() -> Result<()> {
     let db = database()?;
     let read_txn = db.begin_read().context("can't begin read transaction")?;
@@ -110,14 +117,7 @@ pub(crate) fn used_tags() -> Result<()> {
                 .context("can't get tag table row")
                 .and_then(|(tag, timestamp)| {
                     csv_writer
-                        .write_record([
-                            tag.value(),
-                            OffsetDateTime::from_unix_timestamp(timestamp.value())
-                                .context("can't decode unix timestamp")?
-                                .format(&Rfc3339)
-                                .context("can't format timestamp")?
-                                .as_str(),
-                        ])
+                        .write_record([tag.value(), format_timestamp(timestamp.value())?.as_str()])
                         .context("can't write CSV record")
                 })
         })?;
