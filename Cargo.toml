@@ -1,8 +1,8 @@
 [package]
 name = "random-tag"
-version = "0.1.11"
+version = "1.0.0-beta.0"
 edition = "2021"
-rust-version = "1.59"
+rust-version = "1.73"
 license = "MIT"
 authors = ["Gleb Chipiga"]
 keywords = ["cli", "random", "random-generation"]
@@ -12,9 +12,15 @@ repository = "https://github.com/gleb-chipiga/random-tag"
 
 [dependencies]
 anyhow = "1.0"
+clap = { version = "4.4", features = ["default", "derive", "cargo"] }
+clap_complete = "4.4"
+csv = "1.3"
+dialoguer = "0.11"
+dirs = "5.0"
+itertools = "0.11"
 rand = "0.8"
-clap = { version = "3.1", features = ["default", "derive", "cargo"] }
-clap_complete = "3.1"
+redb = "1.2"
+time = { version = "0.3", features = ["formatting", "local-offset"] }
 
 [profile.release]
 strip = true
