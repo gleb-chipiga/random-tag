@@ -29,7 +29,7 @@ pub(crate) fn generate_tags(chars: Chars, length: usize, amount: usize) -> Resul
     let mut table = write_txn
         .open_table(TAGS_TABLE)
         .with_context(|| format!("can't open table {TAGS_TABLE}"))?;
-    let repeats = length.div_ceil(chars.value.len()) as u8;
+    let max_repeats = length.div_ceil(chars.value.len()) as u8;
     let char_counts = {
         let mut char_counts = HashMap::with_capacity(chars.value.len());
         chars.value.iter().for_each(|char| {
@@ -41,7 +41,7 @@ pub(crate) fn generate_tags(chars: Chars, length: usize, amount: usize) -> Resul
     let tags = repeat_with(|| {
         repeat_with(|| chars.value.choose(&mut rng).unwrap())
             .take(length * 2)
-            .filter(|char| *char_counts.borrow().get(char).unwrap() < repeats)
+            .filter(|char| *char_counts.borrow().get(char).unwrap() < max_repeats)
             .dedup()
             .inspect(|char| {
                 *char_counts.borrow_mut().get_mut(char).unwrap() += 1;
@@ -66,11 +66,14 @@ pub(crate) fn generate_tags(chars: Chars, length: usize, amount: usize) -> Resul
             .transpose()
     })
     .take(amount)
-    .try_fold(Vec::with_capacity(amount), |mut tags, tag_result| {
-        tags.push(tag_result?);
-        Ok::<_, anyhow::Error>(tags)
-    })?;
-    let tag_index = match tags.len() {
+    .try_fold(
+        Vec::with_capacity(amount),
+        |mut tags, tag_result| -> Result<Vec<String>> {
+            tags.push(tag_result?);
+            Ok(tags)
+        },
+    )?;
+    match tags.len() {
         1 => Some(0),
         _ => Select::with_theme(&ColorfulTheme::default())
             .with_prompt("Select one tag")
@@ -78,8 +81,9 @@ pub(crate) fn generate_tags(chars: Chars, length: usize, amount: usize) -> Resul
             .items(&tags)
             .interact_opt()
             .context("can't select tag")?,
-    };
-    if let Some(tag_index) = tag_index {
+    }
+    .into_iter()
+    .try_for_each(|tag_index| -> Result<()> {
         table
             .insert(
                 tags[tag_index].as_str(),
@@ -87,7 +91,8 @@ pub(crate) fn generate_tags(chars: Chars, length: usize, amount: usize) -> Resul
             )
             .with_context(|| format!("can't insert tag {} to table", tags[tag_index]))?;
         println!("{}", tags[tag_index]);
-    }
+        Ok(())
+    })?;
     drop(table);
     write_txn.commit().context("can't commit write transaction")
 }
