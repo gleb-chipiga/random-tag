@@ -89,10 +89,7 @@ pub(crate) fn generate_tags(chars: Chars, length: usize, amount: usize) -> Resul
         println!("{}", tags[tag_index]);
     }
     drop(table);
-    write_txn
-        .commit()
-        .context("can't commit write transaction")?;
-    Ok(())
+    write_txn.commit().context("can't commit write transaction")
 }
 
 pub(crate) fn used_tags() -> Result<()> {
@@ -109,15 +106,20 @@ pub(crate) fn used_tags() -> Result<()> {
         .iter()
         .context("can't iterate tags table")?
         .try_for_each(|row_result| {
-            let (tag, timestamp) = row_result.context("can't get tag table row")?;
-            let date_time = OffsetDateTime::from_unix_timestamp(timestamp.value())
-                .context("can't decode unix timestamp")?
-                .format(&Rfc3339)
-                .context("can't format timestamp")?;
-            csv_writer
-                .write_record([tag.value(), date_time.as_str()])
-                .context("can't write CSV record")?;
-            Ok::<_, anyhow::Error>(())
+            row_result
+                .context("can't get tag table row")
+                .and_then(|(tag, timestamp)| {
+                    csv_writer
+                        .write_record([
+                            tag.value(),
+                            OffsetDateTime::from_unix_timestamp(timestamp.value())
+                                .context("can't decode unix timestamp")?
+                                .format(&Rfc3339)
+                                .context("can't format timestamp")?
+                                .as_str(),
+                        ])
+                        .context("can't write CSV record")
+                })
         })?;
     Ok(())
 }
