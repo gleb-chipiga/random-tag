@@ -70,7 +70,7 @@ pub(crate) fn generate_tags(chars: Chars, length: usize, amount: usize) -> Resul
         tags.push(tag_result?);
         Ok::<_, anyhow::Error>(tags)
     })?;
-    if let Some(index) = match tags.len() {
+    let tag_index = match tags.len() {
         1 => Some(0),
         _ => Select::with_theme(&ColorfulTheme::default())
             .with_prompt("Select one tag")
@@ -78,14 +78,15 @@ pub(crate) fn generate_tags(chars: Chars, length: usize, amount: usize) -> Resul
             .items(&tags)
             .interact_opt()
             .context("can't select tag")?,
-    } {
+    };
+    if let Some(tag_index) = tag_index {
         table
             .insert(
-                tags[index].as_str(),
+                tags[tag_index].as_str(),
                 OffsetDateTime::now_utc().unix_timestamp(),
             )
-            .with_context(|| format!("can't insert tag {} to table", tags[index]))?;
-        println!("{}", tags[index]);
+            .with_context(|| format!("can't insert tag {} to table", tags[tag_index]))?;
+        println!("{}", tags[tag_index]);
     }
     drop(table);
     write_txn
