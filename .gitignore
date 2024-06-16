@@ -3,3 +3,4 @@ Cargo.lock
 .idea
 .tags.csv
 justfile
+tags.csv
