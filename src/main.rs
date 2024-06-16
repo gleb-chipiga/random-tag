@@ -6,14 +6,18 @@ use clap::Parser;
 
 use crate::{
     command::{generate_completion, validate_length_and_chars, Args, SubcommandVariants},
-    tags::{generate_tags, used_tags},
+    tags::{check_db, drop_db, load_tags},
+    tags::{dump_tags, generate_tags},
 };
 
 fn main() -> Result<()> {
     let args = Args::parse();
     match args.subcommand {
         Some(SubcommandVariants::Completions { shell }) => generate_completion(shell),
-        Some(SubcommandVariants::UsedTags) => used_tags(),
+        Some(SubcommandVariants::DumpTags) => dump_tags(),
+        Some(SubcommandVariants::LoadTags { path }) => load_tags(path),
+        Some(SubcommandVariants::CheckDb) => check_db(),
+        Some(SubcommandVariants::DropDb) => drop_db(),
         None => {
             validate_length_and_chars(&args);
             generate_tags(args.chars, args.length, args.amount)

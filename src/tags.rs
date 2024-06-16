@@ -1,18 +1,27 @@
-use std::{cell::RefCell, collections::HashMap, fs::create_dir_all, io, iter::repeat_with};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    fs::{create_dir_all, remove_file, File},
+    io::{stdin, stdout, BufReader},
+    iter::repeat_with,
+    path::PathBuf,
+};
 
 use anyhow::{Context, Result};
-use dialoguer::{theme::ColorfulTheme, Select};
+use csv::ReaderBuilder;
+use dialoguer::{theme::ColorfulTheme, Confirm, Select};
 use dirs::data_dir;
 use itertools::Itertools;
 use rand::{prelude::SliceRandom, thread_rng};
 use redb::{Database, ReadableTable, TableDefinition};
+use serde::{Deserialize, Serialize};
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 
 use crate::command::Chars;
 
 static TAGS_TABLE: TableDefinition<&str, i64> = TableDefinition::new("tags");
 
-fn database() -> Result<Database> {
+fn database_path() -> Result<PathBuf> {
     let data_dir = data_dir()
         .context("can't get data_dir path")?
         .join(env!("CARGO_PKG_NAME"));
@@ -20,7 +29,21 @@ fn database() -> Result<Database> {
         create_dir_all(&data_dir).context("can't create data dir")?;
     }
     let db_path = data_dir.join("used-tags.redb");
+    Ok(db_path)
+}
+
+fn database() -> Result<Database> {
+    let db_path = database_path()?;
     Database::create(&db_path).with_context(|| format!("can't create database {db_path:?}"))
+}
+
+fn select_tag_index(tags: &[String]) -> Result<Option<usize>> {
+    Select::with_theme(&ColorfulTheme::default())
+        .with_prompt("Select one tag")
+        .report(false)
+        .items(tags)
+        .interact_opt()
+        .context("can't select tag")
 }
 
 pub(crate) fn generate_tags(chars: Chars, length: usize, amount: usize) -> Result<()> {
@@ -74,46 +97,45 @@ pub(crate) fn generate_tags(chars: Chars, length: usize, amount: usize) -> Resul
         },
     )?;
     match tags.len() {
-        1 => Some(0),
-        _ => Select::with_theme(&ColorfulTheme::default())
-            .with_prompt("Select one tag")
-            .report(false)
-            .items(&tags)
-            .interact_opt()
-            .context("can't select tag")?,
+        1 => Some(tags.into_iter().next().unwrap()),
+        _ => select_tag_index(&tags)?.map(|tag_index| tags.into_iter().nth(tag_index).unwrap()),
     }
     .into_iter()
-    .try_for_each(|tag_index| -> Result<()> {
+    .try_for_each(|tag| -> Result<()> {
         table
-            .insert(
-                tags[tag_index].as_str(),
-                OffsetDateTime::now_utc().unix_timestamp(),
-            )
-            .with_context(|| format!("can't insert tag {} to table", tags[tag_index]))?;
-        println!("{}", tags[tag_index]);
+            .insert(tag.as_str(), OffsetDateTime::now_utc().unix_timestamp())
+            .with_context(|| format!("can't insert tag {tag} to table"))?;
+        println!("{tag}");
         Ok(())
     })?;
     drop(table);
     write_txn.commit().context("can't commit write transaction")
 }
 
-fn format_timestamp(timestamp: i64) -> Result<String> {
-    OffsetDateTime::from_unix_timestamp(timestamp)
-        .context("can't decode unix timestamp")?
-        .format(&Rfc3339)
-        .context("can't format timestamp")
+fn serialize_timestamp<S>(timestamp: &i64, serializer: S) -> std::result::Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let datetime_string = OffsetDateTime::from_unix_timestamp(*timestamp)
+        .map_err(serde::ser::Error::custom)
+        .and_then(|datetime| datetime.format(&Rfc3339).map_err(serde::ser::Error::custom))?;
+    serializer.serialize_str(&datetime_string)
 }
 
-pub(crate) fn used_tags() -> Result<()> {
+#[derive(Serialize)]
+struct OutputRecord<'a> {
+    tag: &'a str,
+    #[serde(rename = "datetime", serialize_with = "serialize_timestamp")]
+    timestamp: i64,
+}
+
+pub(crate) fn dump_tags() -> Result<()> {
     let db = database()?;
     let read_txn = db.begin_read().context("can't begin read transaction")?;
     let table = read_txn
         .open_table(TAGS_TABLE)
         .with_context(|| format!("can't open table {TAGS_TABLE}"))?;
-    let mut csv_writer = csv::Writer::from_writer(io::stdout());
-    csv_writer
-        .write_record(["tag", "datetime"])
-        .context("can't write CSV header")?;
+    let mut csv_writer = csv::Writer::from_writer(stdout());
     table
         .iter()
         .context("can't iterate tags table")?
@@ -122,9 +144,88 @@ pub(crate) fn used_tags() -> Result<()> {
                 .context("can't get tag table row")
                 .and_then(|(tag, timestamp)| {
                     csv_writer
-                        .write_record([tag.value(), format_timestamp(timestamp.value())?.as_str()])
+                        .serialize(OutputRecord {
+                            tag: tag.value(),
+                            timestamp: timestamp.value(),
+                        })
                         .context("can't write CSV record")
                 })
         })?;
+    Ok(())
+}
+
+fn deserialize_timestamp<'de, D>(deserializer: D) -> std::result::Result<i64, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let datetime_string = String::deserialize(deserializer)?;
+    OffsetDateTime::parse(&datetime_string, &Rfc3339)
+        .map_err(serde::de::Error::custom)
+        .map(|datetime| datetime.unix_timestamp())
+}
+
+#[derive(Deserialize)]
+struct InputRecord {
+    tag: String,
+    #[serde(rename = "datetime", deserialize_with = "deserialize_timestamp")]
+    timestamp: i64,
+}
+
+pub(crate) fn load_tags(path: Option<PathBuf>) -> Result<()> {
+    let input: Box<dyn std::io::Read> = match path {
+        Some(path) => Box::new(BufReader::new(
+            File::open(path).context("can't open input file")?,
+        )),
+        None => Box::new(stdin()),
+    };
+    let db = database()?;
+    let write_txn = db.begin_write().context("can't begin write transaction")?;
+    {
+        let mut table = write_txn
+            .open_table(TAGS_TABLE)
+            .with_context(|| format!("can't open table {TAGS_TABLE}"))?;
+        ReaderBuilder::new()
+            .from_reader(input)
+            .into_deserialize::<InputRecord>()
+            .try_for_each(|record_result| -> Result<()> {
+                let record = record_result.context("can't read CSV record")?;
+                table
+                    .insert(record.tag.as_str(), record.timestamp)
+                    .map(|_| ())
+                    .with_context(|| format!("can't insert tag {} to table", record.tag))
+            })
+            .context("can't insert CSV records to table")?;
+    }
+    write_txn.commit().context("can't commit write transaction")
+}
+
+pub(crate) fn check_db() -> Result<()> {
+    let mut db = database()?;
+    let passed = db
+        .check_integrity()
+        .context("can't check database integrity")?;
+    if passed {
+        println!("Database is OK");
+    } else {
+        println!("Database was repaired");
+    }
+    db.compact().context("can't compact database")?;
+    Ok(())
+}
+
+pub(crate) fn drop_db() -> Result<()> {
+    let db_path = database_path()?;
+    if db_path.exists() {
+        if Confirm::new()
+            .with_prompt("Do you really want to drop database with used tags?")
+            .interact()
+            .context("can't get confirm prompt answer")?
+        {
+            remove_file(&db_path).context("can't drop database file")?;
+            println!("Database was dropped");
+        }
+    } else {
+        println!("Database not exists");
+    }
     Ok(())
 }
