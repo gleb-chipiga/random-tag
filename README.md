@@ -4,7 +4,7 @@ Command-line utility for generating random tags.
 
 [![Random tag crate](https://img.shields.io/crates/v/random-tag.svg)](https://crates.io/crates/random-tag)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![minimum rustc 1.74](https://img.shields.io/badge/rustc-1.59+-red.svg)
+![minimum rustc 1.74](https://img.shields.io/badge/rustc-1.74+-red.svg)
 
 ## Installation
 
