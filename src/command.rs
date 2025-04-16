@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use clap::{
     builder::TypedValueParser, error::ErrorKind, value_parser, CommandFactory, Parser, Subcommand,
 };
-use clap_complete::{generate, Shell};
+use clap_complete::{generate, Generator, Shell};
 
 #[derive(Clone)]
 struct NumberParser;
@@ -56,6 +56,8 @@ pub(crate) enum SubcommandVariants {
         #[arg(value_enum)]
         shell: Shell,
     },
+    /// Outputs the completion file for Nu shell
+    NuCompletions,
     /// Dump used tags as CSV to stdout
     DumpTags,
     /// Load used tags from stdin or file in CSV format
@@ -86,11 +88,13 @@ pub(crate) struct Args {
     pub(crate) subcommand: Option<SubcommandVariants>,
 }
 
-pub(crate) fn generate_completion(shell: Shell) -> anyhow::Result<()> {
+pub(crate) fn generate_completion<G>(gen: G)
+where
+    G: Generator,
+{
     let mut command = Args::command();
     let name = command.get_name().to_string();
-    generate(shell, &mut command, name, &mut io::stdout());
-    Ok(())
+    generate(gen, &mut command, name, &mut io::stdout())
 }
 
 pub(crate) fn validate_length_and_chars(args: &Args) {

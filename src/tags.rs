@@ -12,7 +12,7 @@ use csv::ReaderBuilder;
 use dialoguer::{theme::ColorfulTheme, Confirm, Select};
 use dirs::data_dir;
 use itertools::Itertools;
-use rand::{prelude::SliceRandom, thread_rng};
+use rand::{rng, seq::IndexedRandom};
 use redb::{Database, ReadableTable, TableDefinition};
 use serde::{Deserialize, Serialize};
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
@@ -35,6 +35,15 @@ fn database_path() -> Result<PathBuf> {
 fn database() -> Result<Database> {
     let db_path = database_path()?;
     Database::create(&db_path).with_context(|| format!("can't create database {db_path:?}"))
+}
+
+fn create_table_if_not_exists(db: &Database) -> Result<()> {
+    let write_txn = db.begin_write().context("can't begin write transaction")?;
+    write_txn
+        .open_table(TAGS_TABLE)
+        .context("can't open table")?;
+    write_txn.commit().context("can't commit transaction")?;
+    Ok(())
 }
 
 fn select_tag_index(tags: &[String]) -> Result<Option<usize>> {
@@ -60,7 +69,7 @@ pub(crate) fn generate_tags(chars: Chars, length: usize, amount: usize) -> Resul
         });
         RefCell::new(char_counts)
     };
-    let mut rng = thread_rng();
+    let mut rng = rng();
     let tags = repeat_with(|| {
         repeat_with(|| chars.value.choose(&mut rng).unwrap())
             .take(length * 2)
@@ -131,6 +140,7 @@ struct OutputRecord<'a> {
 
 pub(crate) fn dump_tags() -> Result<()> {
     let db = database()?;
+    create_table_if_not_exists(&db)?;
     let read_txn = db.begin_read().context("can't begin read transaction")?;
     let table = read_txn
         .open_table(TAGS_TABLE)
@@ -209,6 +219,7 @@ pub(crate) fn check_db() -> Result<()> {
     } else {
         println!("Database was repaired");
     }
+    create_table_if_not_exists(&db)?;
     db.compact().context("can't compact database")?;
     Ok(())
 }

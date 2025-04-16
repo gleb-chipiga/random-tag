@@ -1,6 +1,6 @@
 [package]
 name = "random-tag"
-version = "1.0.1"
+version = "1.0.2"
 edition = "2021"
 rust-version = "1.74"
 license = "MIT"
@@ -14,14 +14,15 @@ repository = "https://github.com/gleb-chipiga/random-tag"
 anyhow = "1"
 clap = { version = "4.5", features = ["default", "derive", "cargo"] }
 clap_complete = "4.5"
+clap_complete_nushell = "4.5"
 csv = "1"
 dialoguer = "0.11"
-dirs = "5"
-itertools = "0.13"
-rand = "0.8"
+dirs = "6"
+itertools = "0.14"
+rand = "0.9"
 redb = "2"
 time = { version = "0.3", features = ["formatting", "local-offset", "parsing"] }
-serde = { version = "1.0.203", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
 
 [profile.release]
 strip = true
