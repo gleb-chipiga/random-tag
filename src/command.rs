@@ -59,6 +59,12 @@ pub(crate) enum SubcommandVariants {
     },
     /// Outputs the completion file for Nu shell
     NuCompletions,
+    /// Generate man page
+    GenManPage {
+        /// Directory to save man page
+        #[arg(short, long)]
+        dir: PathBuf,
+    },
     /// Dump used tags as CSV to stdout
     DumpTags,
     /// Load used tags from stdin or file in CSV format
@@ -71,12 +77,6 @@ pub(crate) enum SubcommandVariants {
     CheckDb,
     /// Drop used tags database
     DropDb,
-    /// Generate man page
-    GenManPage {
-        /// Directory to save man page
-        #[arg(short, long)]
-        dir: PathBuf,
-    },
 }
 
 #[derive(Parser, Debug)]
