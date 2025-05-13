@@ -23,10 +23,10 @@ static TAGS_TABLE: TableDefinition<&str, i64> = TableDefinition::new("tags");
 
 fn database_path() -> Result<PathBuf> {
     let data_dir = data_dir()
-        .context("can't get data_dir path")?
+        .context("failed to get data_dir path")?
         .join(env!("CARGO_PKG_NAME"));
     if !data_dir.exists() {
-        create_dir_all(&data_dir).context("can't create data dir")?;
+        create_dir_all(&data_dir).context("failed to create data dir")?;
     }
     let db_path = data_dir.join("used-tags.redb");
     Ok(db_path)
@@ -34,15 +34,15 @@ fn database_path() -> Result<PathBuf> {
 
 fn database() -> Result<Database> {
     let db_path = database_path()?;
-    Database::create(&db_path).with_context(|| format!("can't create database {db_path:?}"))
+    Database::create(&db_path).with_context(|| format!("failed to create database {db_path:?}"))
 }
 
 fn create_table_if_not_exists(db: &Database) -> Result<()> {
-    let write_txn = db.begin_write().context("can't begin write transaction")?;
+    let write_txn = db.begin_write().context("failed to begin write transaction")?;
     write_txn
         .open_table(TAGS_TABLE)
-        .context("can't open table")?;
-    write_txn.commit().context("can't commit transaction")?;
+        .context("failed to open table")?;
+    write_txn.commit().context("failed to commit transaction")?;
     Ok(())
 }
 
@@ -52,15 +52,15 @@ fn select_tag_index(tags: &[String]) -> Result<Option<usize>> {
         .report(false)
         .items(tags)
         .interact_opt()
-        .context("can't select tag")
+        .context("failed to select tag")
 }
 
 pub(crate) fn generate_tags(chars: Chars, length: usize, amount: usize) -> Result<()> {
     let db = database()?;
-    let write_txn = db.begin_write().context("can't begin write transaction")?;
+    let write_txn = db.begin_write().context("failed to begin write transaction")?;
     let mut table = write_txn
         .open_table(TAGS_TABLE)
-        .with_context(|| format!("can't open table {TAGS_TABLE}"))?;
+        .with_context(|| format!("failed to open table {TAGS_TABLE}"))?;
     let max_repeats = length.div_ceil(chars.value.len()) as u8;
     let char_counts = {
         let mut char_counts = HashMap::with_capacity(chars.value.len());
@@ -93,7 +93,7 @@ pub(crate) fn generate_tags(chars: Chars, length: usize, amount: usize) -> Resul
     .filter_map(|tag| {
         table
             .get(tag.as_str())
-            .with_context(|| format!("can't get tag {tag} from table"))
+            .with_context(|| format!("failed to get tag {tag} from table"))
             .map(|option| option.is_none().then_some(tag))
             .transpose()
     })
@@ -113,12 +113,12 @@ pub(crate) fn generate_tags(chars: Chars, length: usize, amount: usize) -> Resul
     .try_for_each(|tag| -> Result<()> {
         table
             .insert(tag.as_str(), OffsetDateTime::now_utc().unix_timestamp())
-            .with_context(|| format!("can't insert tag {tag} to table"))?;
+            .with_context(|| format!("failed to insert tag {tag} to table"))?;
         println!("{tag}");
         Ok(())
     })?;
     drop(table);
-    write_txn.commit().context("can't commit write transaction")
+    write_txn.commit().context("failed to commit write transaction")
 }
 
 fn serialize_timestamp<S>(timestamp: &i64, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -141,24 +141,24 @@ struct OutputRecord<'a> {
 pub(crate) fn dump_tags() -> Result<()> {
     let db = database()?;
     create_table_if_not_exists(&db)?;
-    let read_txn = db.begin_read().context("can't begin read transaction")?;
+    let read_txn = db.begin_read().context("failed to begin read transaction")?;
     let table = read_txn
         .open_table(TAGS_TABLE)
-        .with_context(|| format!("can't open table {TAGS_TABLE}"))?;
+        .with_context(|| format!("failed to open table {TAGS_TABLE}"))?;
     let mut csv_writer = csv::Writer::from_writer(stdout());
     table
         .iter()
-        .context("can't iterate tags table")?
+        .context("failed to iterate tags table")?
         .try_for_each(|row_result| {
             row_result
-                .context("can't get tag table row")
+                .context("failed to get tag table row")
                 .and_then(|(tag, timestamp)| {
                     csv_writer
                         .serialize(OutputRecord {
                             tag: tag.value(),
                             timestamp: timestamp.value(),
                         })
-                        .context("can't write CSV record")
+                        .context("failed to write CSV record")
                 })
         })?;
     Ok(())
@@ -184,43 +184,43 @@ struct InputRecord {
 pub(crate) fn load_tags(path: Option<PathBuf>) -> Result<()> {
     let input: Box<dyn std::io::Read> = match path {
         Some(path) => Box::new(BufReader::new(
-            File::open(path).context("can't open input file")?,
+            File::open(path).context("failed to open input file")?,
         )),
         None => Box::new(stdin()),
     };
     let db = database()?;
-    let write_txn = db.begin_write().context("can't begin write transaction")?;
+    let write_txn = db.begin_write().context("failed to begin write transaction")?;
     {
         let mut table = write_txn
             .open_table(TAGS_TABLE)
-            .with_context(|| format!("can't open table {TAGS_TABLE}"))?;
+            .with_context(|| format!("failed to open table {TAGS_TABLE}"))?;
         ReaderBuilder::new()
             .from_reader(input)
             .into_deserialize::<InputRecord>()
             .try_for_each(|record_result| -> Result<()> {
-                let record = record_result.context("can't read CSV record")?;
+                let record = record_result.context("failed to read CSV record")?;
                 table
                     .insert(record.tag.as_str(), record.timestamp)
                     .map(|_| ())
-                    .with_context(|| format!("can't insert tag {} to table", record.tag))
+                    .with_context(|| format!("failed to insert tag {} to table", record.tag))
             })
-            .context("can't insert CSV records to table")?;
+            .context("failed to insert CSV records to table")?;
     }
-    write_txn.commit().context("can't commit write transaction")
+    write_txn.commit().context("failed to commit write transaction")
 }
 
 pub(crate) fn check_db() -> Result<()> {
     let mut db = database()?;
     let passed = db
         .check_integrity()
-        .context("can't check database integrity")?;
+        .context("failed to check database integrity")?;
     if passed {
         println!("Database is OK");
     } else {
         println!("Database was repaired");
     }
     create_table_if_not_exists(&db)?;
-    db.compact().context("can't compact database")?;
+    db.compact().context("failed to compact database")?;
     Ok(())
 }
 
@@ -230,9 +230,9 @@ pub(crate) fn drop_db() -> Result<()> {
         if Confirm::new()
             .with_prompt("Do you really want to drop database with used tags?")
             .interact()
-            .context("can't get confirm prompt answer")?
+            .context("failed to get confirm prompt answer")?
         {
-            remove_file(&db_path).context("can't drop database file")?;
+            remove_file(&db_path).context("failed to drop database file")?;
             println!("Database was dropped");
         }
     } else {
