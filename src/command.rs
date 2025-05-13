@@ -1,5 +1,4 @@
-use std::io;
-use std::path::PathBuf;
+use std::{io, path::PathBuf};
 
 use clap::{
     builder::TypedValueParser, error::ErrorKind, value_parser, CommandFactory, Parser, Subcommand,
