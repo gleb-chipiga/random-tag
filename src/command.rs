@@ -3,6 +3,7 @@ use std::{io, path::PathBuf};
 use anyhow::Context;
 use clap::{
     builder::TypedValueParser, error::ErrorKind, value_parser, CommandFactory, Parser, Subcommand,
+    ValueEnum,
 };
 
 #[derive(Clone)]
@@ -47,20 +48,26 @@ fn parse_chars(proxy_str: &str) -> Result<Chars, String> {
     }
 }
 
+#[derive(ValueEnum, Clone, Debug)]
+pub(crate) enum CompletionShell {
+    Bash,
+    Elvish,
+    Fish,
+    PowerShell,
+    Zsh,
+    Nushell,
+}
+
 #[derive(Subcommand, Debug)]
 pub(crate) enum SubcommandVariants {
-    /// Outputs the completion file for given shell
+    /// Outputs the completion file for shell
     Completions {
         /// Shell type
-        #[arg(value_enum)]
-        shell: clap_complete::Shell,
+        shell: CompletionShell,
     },
-    /// Outputs the completion file for Nu shell
-    NuCompletions,
-    /// Generate man page
-    GenManPage {
-        /// Directory to save man page
-        #[arg(short, long)]
+    /// Generate man pages
+    ManPages {
+        /// Directory to save man pages
         dir: PathBuf,
     },
     /// Dump used tags as CSV to stdout
@@ -68,7 +75,6 @@ pub(crate) enum SubcommandVariants {
     /// Load used tags from stdin or file in CSV format
     LoadTags {
         /// Path to CSV file with tags
-        #[arg(short, long)]
         path: Option<PathBuf>,
     },
     /// Check used tags database
@@ -93,13 +99,22 @@ pub(crate) struct Args {
     pub(crate) subcommand: Option<SubcommandVariants>,
 }
 
-pub(crate) fn generate_completion<G>(gen: G)
-where
-    G: clap_complete::Generator,
-{
+pub(crate) fn generate_completion(shell: CompletionShell) {
     let mut command = Args::command();
     let name = command.get_name().to_string();
-    clap_complete::generate(gen, &mut command, name, &mut io::stdout())
+    macro_rules! generate_completion {
+        ($shell_type:expr) => {
+            clap_complete::generate($shell_type, &mut command, name, &mut io::stdout())
+        };
+    }
+    match shell {
+        CompletionShell::Bash => generate_completion!(clap_complete::Shell::Bash),
+        CompletionShell::Elvish => generate_completion!(clap_complete::Shell::Elvish),
+        CompletionShell::Fish => generate_completion!(clap_complete::Shell::Fish),
+        CompletionShell::PowerShell => generate_completion!(clap_complete::Shell::PowerShell),
+        CompletionShell::Zsh => generate_completion!(clap_complete::Shell::Zsh),
+        CompletionShell::Nushell => generate_completion!(clap_complete_nushell::Nushell),
+    }
 }
 
 pub(crate) fn generate_man_page(dir: PathBuf) -> anyhow::Result<()> {

@@ -3,7 +3,6 @@ mod tags;
 
 use anyhow::Result;
 use clap::Parser;
-use clap_complete_nushell::Nushell;
 
 use crate::{
     command::{
@@ -20,11 +19,7 @@ fn main() -> Result<()> {
             generate_completion(shell);
             Ok(())
         }
-        Some(SubcommandVariants::NuCompletions) => {
-            generate_completion(Nushell);
-            Ok(())
-        }
-        Some(SubcommandVariants::GenManPage { dir }) => generate_man_page(dir),
+        Some(SubcommandVariants::ManPages { dir }) => generate_man_page(dir),
         Some(SubcommandVariants::DumpTags) => dump_tags(),
         Some(SubcommandVariants::LoadTags { path }) => load_tags(path),
         Some(SubcommandVariants::CheckDb) => check_db(),
