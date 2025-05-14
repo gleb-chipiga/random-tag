@@ -4,8 +4,6 @@ use anyhow::Context;
 use clap::{
     builder::TypedValueParser, error::ErrorKind, value_parser, CommandFactory, Parser, Subcommand,
 };
-use clap_complete::{generate, Generator, Shell};
-use clap_mangen::generate_to;
 
 #[derive(Clone)]
 struct NumberParser;
@@ -55,7 +53,7 @@ pub(crate) enum SubcommandVariants {
     Completions {
         /// Shell type
         #[arg(value_enum)]
-        shell: Shell,
+        shell: clap_complete::Shell,
     },
     /// Outputs the completion file for Nu shell
     NuCompletions,
@@ -97,16 +95,16 @@ pub(crate) struct Args {
 
 pub(crate) fn generate_completion<G>(gen: G)
 where
-    G: Generator,
+    G: clap_complete::Generator,
 {
     let mut command = Args::command();
     let name = command.get_name().to_string();
-    generate(gen, &mut command, name, &mut io::stdout())
+    clap_complete::generate(gen, &mut command, name, &mut io::stdout())
 }
 
 pub(crate) fn generate_man_page(dir: PathBuf) -> anyhow::Result<()> {
     let cmd = Args::command();
-    generate_to(cmd, dir).context("failed to generate man page")?;
+    clap_mangen::generate_to(cmd, dir).context("failed to generate man page")?;
     Ok(())
 }
 
