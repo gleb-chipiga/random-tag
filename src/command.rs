@@ -1,10 +1,7 @@
 use std::{io, path::PathBuf};
 
 use anyhow::Context;
-use clap::{
-    builder::TypedValueParser, error::ErrorKind, value_parser, CommandFactory, Parser, Subcommand,
-    ValueEnum,
-};
+use clap::{builder::TypedValueParser, error::ErrorKind, value_parser, CommandFactory};
 
 #[derive(Clone)]
 struct NumberParser;
@@ -48,7 +45,7 @@ fn parse_chars(proxy_str: &str) -> Result<Chars, String> {
     }
 }
 
-#[derive(ValueEnum, Clone, Debug)]
+#[derive(clap::ValueEnum, Clone, Debug)]
 pub(crate) enum CompletionShell {
     Bash,
     Elvish,
@@ -58,7 +55,7 @@ pub(crate) enum CompletionShell {
     Nushell,
 }
 
-#[derive(Subcommand, Debug)]
+#[derive(clap::Subcommand, Debug)]
 pub(crate) enum SubcommandVariants {
     /// Outputs the completion file for shell
     Completions {
@@ -83,7 +80,7 @@ pub(crate) enum SubcommandVariants {
     DropDb,
 }
 
-#[derive(Parser, Debug)]
+#[derive(clap::Parser, Debug)]
 #[command(author, version, about)]
 pub(crate) struct Args {
     /// Tag chars
@@ -119,7 +116,7 @@ pub(crate) fn generate_completion(shell: CompletionShell) {
 
 pub(crate) fn generate_man_page(dir: PathBuf) -> anyhow::Result<()> {
     let cmd = Args::command();
-    clap_mangen::generate_to(cmd, dir).context("failed to generate man page")?;
+    clap_mangen::generate_to(cmd, dir).context("failed to generate man pages")?;
     Ok(())
 }
 
